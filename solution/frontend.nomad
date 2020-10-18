@@ -10,11 +10,20 @@ job "frontend" {
       policy = {}
     }
 
+    update {
+      max_parallel = 1
+      min_healthy_time = "5s"
+      healthy_deadline = "30s"
+      auto_revert = false
+      auto_promote = false
+      canary = 1
+    }
+
     task "frontend" {
       driver = "docker"
 
       config {
-        image = "thedojoseries/frontend"
+        image = "thedojoseries/frontend:2.0"
       }
 
       env {
