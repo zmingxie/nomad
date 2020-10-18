@@ -19,9 +19,7 @@ job "frontend" {
 
       resources {
         network {
-          port "http" {
-            static = 8080
-          }
+          port "http" { }
         }
       }
     }
