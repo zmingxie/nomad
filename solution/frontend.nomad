@@ -3,7 +3,12 @@ job "frontend" {
   type = "service"
 
   group "frontend" {
-    count = 1
+    scaling {
+      enabled = true
+      min = 5
+      max = 10
+      policy = {}
+    }
 
     task "frontend" {
       driver = "docker"
