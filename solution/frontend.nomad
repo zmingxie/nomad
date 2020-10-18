@@ -17,6 +17,10 @@ job "frontend" {
         image = "thedojoseries/frontend"
       }
 
+      env {
+        PORT = "${NOMAD_PORT_http}"
+      }
+
       resources {
         network {
           port "http" { }
