@@ -11,6 +11,14 @@ job "frontend" {
       config {
         image = "thedojoseries/frontend"
       }
+
+      resources {
+        network {
+          port "http" {
+            static = 8080
+          }
+        }
+      }
     }
   }
 }
