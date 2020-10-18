@@ -10,8 +10,8 @@ Parameters:
     Description: The number of the team (for the subnet address)
     Type: String
 
-Mappings: 
-  AMI: 
+Mappings:
+  AMI:
     sa-east-1:
       ID: ami-018ccfb6b4745882a
     us-east-1:
@@ -23,11 +23,11 @@ Mappings:
     us-west-2:
       ID: ami-0873b46c45c11058d
     ca-central-1:
-      ID: ami-013d1df4bcea6ba95       
+      ID: ami-013d1df4bcea6ba95
     eu-central-1:
-      ID: ami-0c115dbd34c69a004       
+      ID: ami-0c115dbd34c69a004
     eu-north-1:
-      ID: ami-039609244d2810a6b       
+      ID: ami-039609244d2810a6b
     eu-west-1:
       ID: ami-07d9160fa81ccffb5
 
@@ -52,21 +52,21 @@ Resources:
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
 
-  GeneratePasswordLambda: 
+  GeneratePasswordLambda:
     Type: "AWS::Lambda::Function"
-    Properties: 
+    Properties:
       Handler: "index.handler"
       Role: !GetAtt GeneratePasswordLambdaRole.Arn
-      Code: 
+      Code:
         ZipFile: >
           var cfr = require('cfn-response');
           var crypto = require('crypto');
-          
+
           exports.handler = (event, context) => {
             var resID = event.PhysicalResourceId;
             var teamName = event.ResourceProperties.teamName;
-            var password = teamName + "-" + crypto.randomBytes(3).toString("hex");
-            
+            var password = teamName + "-A" + crypto.randomBytes(3).toString("hex");
+
             cfr.send(event, context, cfr.SUCCESS, {teamPassword: password}, resID)
           }
       Runtime: "nodejs12.x"
@@ -80,10 +80,10 @@ Resources:
 
   UserPasswordSecretsManager:
     Type: AWS::SecretsManager::Secret
-    Properties: 
+    Properties:
       Description: !Sub Password for ${Namespace}
       Name: !Sub /${Namespace}/password
-      SecretString: 
+      SecretString:
         !GetAtt GeneratePassword.teamPassword
 
 #================================================================================
@@ -92,16 +92,16 @@ Resources:
 
   TeamUser:
     Type: AWS::IAM::User
-    Properties: 
-      LoginProfile: 
+    Properties:
+      LoginProfile:
         Password: !GetAtt GeneratePassword.teamPassword
         PasswordResetRequired: false
-      ManagedPolicyArns: 
+      ManagedPolicyArns:
         - !Ref DenyOtherRegionsPolicy
         - !Ref Cloud9AccessPolicy
       Path: /
-      Tags: 
-        - Key: namespace 
+      Tags:
+        - Key: namespace
           Value: !Ref Namespace
       UserName: !Ref Namespace
 
@@ -124,7 +124,7 @@ Resources:
           Condition:
             ForAnyValue:StringNotEqualsIfExists:
               aws:RequestedRegion: [!Sub "${AWS::Region}"]
-  
+
   Cloud9AccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -135,7 +135,7 @@ Resources:
         - Effect: Allow
           Action:
             - cloud9:*
-          Resource: 
+          Resource:
             - '*'
 
 #================================================================================
@@ -144,7 +144,7 @@ Resources:
 
   Vpc:
     Type: AWS::EC2::VPC
-    Properties: 
+    Properties:
       CidrBlock: 10.0.0.0/16
       EnableDnsHostnames: false
       EnableDnsSupport: true
@@ -152,23 +152,23 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${Namespace}-vpc
-  
+
   InternetGateway:
     Type: AWS::EC2::InternetGateway
-    Properties: 
+    Properties:
       Tags:
         - Key: Name
           Value: !Sub ${Namespace}-igw
 
   VpcIgwAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
-    Properties: 
+    Properties:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref Vpc
 
   Subnet:
     Type: AWS::EC2::Subnet
-    Properties: 
+    Properties:
       AvailabilityZone: !Sub ${AWS::Region}a
       CidrBlock: !Sub 10.0.${TeamNumber}.0/24
       MapPublicIpOnLaunch: True
@@ -176,22 +176,22 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${Namespace}-private-subneta
-  
+
   RouteTable:
     Type: AWS::EC2::RouteTable
-    Properties: 
+    Properties:
       VpcId: !Ref Vpc
 
   Route:
     Type: AWS::EC2::Route
-    Properties: 
+    Properties:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
       RouteTableId: !Ref RouteTable
 
   SubnetRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties: 
+    Properties:
       RouteTableId: !Ref RouteTable
       SubnetId: !Ref Subnet
 
@@ -201,7 +201,7 @@ Resources:
 
   Cloud9Environment:
     Type: AWS::Cloud9::EnvironmentEC2
-    Properties: 
+    Properties:
       AutomaticStopTimeMinutes: 20160
       Description: !Sub ${Namespace} Cloud9 environment
       InstanceType: t2.medium
@@ -215,15 +215,15 @@ Resources:
 
   NomadClientSecurityGroup:
     Type: AWS::EC2::SecurityGroup
-    Properties: 
+    Properties:
       GroupDescription: Security Group for the Nomad client
       GroupName: !Sub ${Namespace}-nomad-client
-      SecurityGroupEgress: 
+      SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
           FromPort: 0
           IpProtocol: tcp
           ToPort: 65000
-      SecurityGroupIngress: 
+      SecurityGroupIngress:
         - CidrIp: !Sub 10.0.${TeamNumber}.0/24
           Description: Allow SSH from Cloud9 Environment
           FromPort: 22
@@ -243,17 +243,17 @@ Resources:
 
   NomadClient:
     Type: AWS::EC2::Instance
-    Properties: 
+    Properties:
       AvailabilityZone: !Sub ${AWS::Region}a
       DisableApiTermination: False
       ImageId: !FindInMap [AMI, !Ref AWS::Region, ID]
       InstanceType: t3.medium
       PrivateIpAddress: !Sub 10.0.${TeamNumber}.99
-      SecurityGroupIds: 
+      SecurityGroupIds:
         - !Ref NomadClientSecurityGroup
       SourceDestCheck: True
       SubnetId: !Ref Subnet
-      Tags: 
+      Tags:
         - Key: Name
           Value: !Sub ${Namespace} Nomad Client
       Tenancy: default
@@ -262,12 +262,12 @@ Resources:
             #!/bin/bash -e
 
             # Sets user password
-            echo -e "${GeneratePassword.teamPassword}\n${GeneratePassword.teamPassword}" | passwd ec2-user 
+            echo -e "${GeneratePassword.teamPassword}\n${GeneratePassword.teamPassword}" | passwd ec2-user
 
-            # Enables password authentication through SSH 
+            # Enables password authentication through SSH
             sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/g" /etc/ssh/sshd_config
 
-            # Restarts SSH service 
+            # Restarts SSH service
             service sshd restart
 
             # Installs and starts Docker
