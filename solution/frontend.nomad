@@ -22,6 +22,23 @@ job "frontend" {
           port "http" { }
         }
       }
+
+      service {
+        name = "frontend"
+        port = "http"
+
+        tags = [
+          "frontend",
+          "urlprefix-/"
+        ]
+
+        check {
+          type = "http"
+          path = "/"
+          interval = "5s"
+          timeout = "2s"
+        }
+      }
     }
   }
 }
